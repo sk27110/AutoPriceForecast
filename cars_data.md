@@ -1,6 +1,6 @@
 **Описание столбцов датасета cars_data.csv:**
 
-https://disk.yandex.ru/d/0lG9bTMeQyvNkg -- ссылка на данные где 200к строк
+https://disk.yandex.ru/d/7UTSGkBtf6mALA -- ссылка на данные
 
 
 1. **price**  
