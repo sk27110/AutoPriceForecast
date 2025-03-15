@@ -1,7 +1,7 @@
 **Описание столбцов датасета cars_data.csv:**
 
-https://disk.yandex.ru/d/g66PAFItON2ASg -- ссылка на данные где 200к строк
-https://disk.yandex.ru/d/WVPJgqVBJn4-aQ -- ссылка на данные где 75к строк
+https://disk.yandex.ru/d/0lG9bTMeQyvNkg -- ссылка на данные где 200к строк
+
 
 1. **price**  
    • Тип: `int`  
