@@ -22,6 +22,9 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, 
 import io
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from typing import Tuple, Dict, Any
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 
@@ -59,7 +62,7 @@ class TitleExtractor(BaseEstimator, TransformerMixin):
 app = FastAPI(title="Linear Model API")
 
 
-MODELS: Dict[str, Pipeline] = {}
+MODELS: Dict[str, Dict[str, Any]] = {}
 ACTIVE_MODEL_ID: Optional[str] = None
 
 
@@ -93,20 +96,37 @@ class LassoTrainParams(TrainParams):
 class ModelType(BaseModel):
     model_type: str = Field(default="LinearRegression", description="Type of linear model")
 
-
-
-
 class ModelID(BaseModel):
-    id: str = Field("new_model")
+    id: str = Field(default="new_model")
 
-class PredictInput(BaseModel):
-    data: List[Dict[str, float]]
+
+class PredictOneInput(BaseModel):
+    title: str
+    year: int
+    mileage: float
+    transmission: str
+    body_type: str
+    drive_type: str
+    color: str
+    engine_capacity: float
+    engine_power: float
+    fuel_type: str
+    travel_distance: float
+
+
+class ModelMetrics(BaseModel):
+    r2_score: Optional[float] = None
+    mse: Optional[float] = None
+    train_time: Optional[float] = None
 
 
 class ModelInfo(BaseModel):
     id: str
-    fit_intercept: bool
+    model_type: str
+    hyperparameters: dict
     is_active: bool
+    metrics: ModelMetrics
+    fit_intercept: Optional[bool] = None
 
 
 
@@ -134,7 +154,6 @@ def build_pipeline(params: TrainParams, model_type: ModelType) -> Pipeline:
     }
 
     model_cls = model_cls_map[model_type.model_type]
-    # Преобразование Pydantic модели в словарь
     model_params = params.model_dump()
     model = model_cls(**model_params)
     
@@ -142,31 +161,90 @@ def build_pipeline(params: TrainParams, model_type: ModelType) -> Pipeline:
         ('preprocessor', column_trans),
         ('classifier', model)
     ])
-    return pipeline  # Возвращаем созданный пайплайн
+    return pipeline
+
+
+def train_job(params: TrainParams, model_id: str, model_type):
+    pipeline = None
+    metrics = ModelMetrics(
+        r2_score=None,
+        mse=None,
+        train_time=None,
+    ).dict()
+    start_time = time.time()
+
+    try:
+        pipeline = build_pipeline(params, model_type=model_type)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(pipeline.fit, X_train, y_train)
+            try:
+                future.result(timeout=10)
+                train_time = time.time() - start_time
+                y_pred = pipeline.predict(X_test)
+                metrics = {
+                    'r2_score': r2_score(y_test, y_pred),
+                    'mse': mean_squared_error(y_test, y_pred),
+                    'train_time': float(train_time),
+                }
+            except TimeoutError:
+                print("Training interrupted after 10 seconds")
+    except Exception as e:
+        print("Warning", e)
+    finally:
+        if pipeline is not None:
+            MODELS[model_id] = {
+                'pipeline': pipeline,
+                'metrics': metrics
+            }
+            joblib.dump({
+                'pipeline': pipeline,
+                'metrics': metrics
+            }, MODEL_STORAGE / f"{model_id}.pkl")
+
+
+
+def get_model_info_dict(model_id: str) -> dict:
+    if model_id not in MODELS:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    model_data = MODELS[model_id]
+    pipeline = model_data.get('pipeline')
+    metrics = model_data.get('metrics', {})
+    
+    if pipeline is None:
+        return {
+            "id": model_id,
+            "model_type": "unknown",
+            "hyperparameters": {},
+            "is_active": model_id == ACTIVE_MODEL_ID,
+            "metrics": metrics,
+            "fit_intercept": None
+        }
+    
+    classifier = pipeline.named_steps["classifier"]
+    return {
+        "id": model_id,
+        "model_type": type(classifier).__name__,
+        "hyperparameters": classifier.get_params(),
+        "is_active": model_id == ACTIVE_MODEL_ID,
+        "metrics": metrics,
+        "fit_intercept": classifier.get_params().get('fit_intercept', None)
+    }
+
 
 
 @app.post("/fit_linear", response_model=ModelInfo)
 def train_linear_model(params: LinearRegressionTrainParams, id: ModelID, background_tasks: BackgroundTasks):
     model_type = ModelType(model_type="LinearRegression")
-    def train_job(params: LinearRegressionTrainParams, model_id: str, model_type):
-        start = time.time()
-        # try:
-        pipeline = build_pipeline(params, model_type=model_type)
-        pipeline.fit(X_train, y_train)
-        if time.time() - start <= 10:
-            MODELS[model_id] = pipeline
-            joblib.dump(pipeline, MODEL_STORAGE / f"{model_id}.pkl")
-        # except Exception as e:
-        #     print("Warning")
-
-
     model_id = id.id
     background_tasks.add_task(train_job, params, model_id, model_type)
-
     return ModelInfo(
         id=model_id,
-        fit_intercept=params.fit_intercept,
-        is_active=False
+        model_type=model_type.model_type,
+        hyperparameters=params.dict(),
+        is_active=False,
+        metrics=ModelMetrics(),
+        fit_intercept=params.fit_intercept
     )
 
 
@@ -174,25 +252,16 @@ def train_linear_model(params: LinearRegressionTrainParams, id: ModelID, backgro
 @app.post("/fit_ridge", response_model=ModelInfo)
 def train_ridge_model(params: RidgeTrainParams, id: ModelID, background_tasks: BackgroundTasks):
     model_type = ModelType(model_type="Ridge")
-    def train_job(params: RidgeTrainParams, model_id: str, model_type):
-        start = time.time()
-        # try:
-        pipeline = build_pipeline(params, model_type=model_type)
-        pipeline.fit(X_train, y_train)
-        if time.time() - start <= 10:
-            MODELS[model_id] = pipeline
-            joblib.dump(pipeline, MODEL_STORAGE / f"{model_id}.pkl")
-        # except Exception as e:
-        #     print("Warning")
-
-
     model_id = id.id
     background_tasks.add_task(train_job, params, model_id, model_type)
 
     return ModelInfo(
         id=model_id,
-        fit_intercept=params.fit_intercept,
-        is_active=False
+        model_type=model_type.model_type,
+        hyperparameters=params.dict(),
+        is_active=False,
+        metrics=ModelMetrics(),
+        fit_intercept=params.fit_intercept
     )
 
 
@@ -200,39 +269,34 @@ def train_ridge_model(params: RidgeTrainParams, id: ModelID, background_tasks: B
 @app.post("/fit_lasso", response_model=ModelInfo)
 def train_lasso_model(params: LassoTrainParams, id: ModelID, background_tasks: BackgroundTasks):
     model_type = ModelType(model_type="Lasso")
-    def train_job(params: LassoTrainParams, model_id: str, model_type):
-        start = time.time()
-        # try:
-        pipeline = build_pipeline(params, model_type=model_type)
-        pipeline.fit(X_train, y_train)
-        MODELS[model_id] = pipeline
-        joblib.dump(pipeline, MODEL_STORAGE / f"{model_id}.pkl")
-        # except Exception as e:
-        #     print("Warning")
-
-
     model_id = id.id
     background_tasks.add_task(train_job, params, model_id, model_type)
 
     return ModelInfo(
         id=model_id,
-        fit_intercept=params.fit_intercept,
-        is_active=False
+        model_type=model_type.model_type,
+        hyperparameters=params.dict(),
+        is_active=False,
+        metrics=ModelMetrics(),
+        fit_intercept=params.fit_intercept
     )
 
 
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+@app.post("/predict-one")
+async def predict_one(input_data: PredictOneInput):
     if ACTIVE_MODEL_ID is None:
         raise HTTPException(status_code=404, detail="No active model")
-    model = MODELS[ACTIVE_MODEL_ID]
-
+    
+    model_data = MODELS.get(ACTIVE_MODEL_ID)
+    if model_data is None or 'pipeline' not in model_data:
+        raise HTTPException(status_code=404, detail="Active model not found or not properly initialized")
+    
     try:
-        contents = await file.read()
-        df = pd.read_csv(io.BytesIO(contents))
+        input_dict = input_data.dict()
+        df = pd.DataFrame([input_dict])
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error processing input data: {str(e)}")
 
     required_columns = numerical_cols + categorical_cols
     missing = set(required_columns) - set(df.columns)
@@ -243,21 +307,56 @@ async def predict(file: UploadFile = File(...)):
         )
 
     try:
-        preds = model.predict(df)
-        return {"predictions": preds.tolist()}
+        pipeline = model_data['pipeline']
+        preds = pipeline.predict(df)
+        return {
+            "prediction": float(preds[0])
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
+
+@app.post("/predict-multiple")
+async def predict_multiple(file: UploadFile = File(...)):
+    if ACTIVE_MODEL_ID is None:
+        raise HTTPException(status_code=404, detail="No active model")
+    
+    model_data = MODELS.get(ACTIVE_MODEL_ID)
+    if model_data is None or 'pipeline' not in model_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Active model not found or not properly initialized"
+        )
+    
+    pipeline = model_data['pipeline']
+    
+    try:
+        contents = await file.read()
+        df = pd.read_csv(io.BytesIO(contents))
+        required_columns = numerical_cols + categorical_cols
+        missing = set(required_columns) - set(df.columns)
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required columns: {missing}"
+            )
+        predictions = pipeline.predict(df)
+        return {
+            "predictions": [float(p) for p in predictions]
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}"
+        )
+
+
 @app.get("/models", response_model=List[ModelInfo])
 def list_models():
-    return [
-        ModelInfo(
-            id=model_id,
-            fit_intercept=model.named_steps["classifier"].fit_intercept,
-            is_active=(model_id == ACTIVE_MODEL_ID)
-        ) for model_id, model in MODELS.items()
-    ]
+    return [ModelInfo(**get_model_info_dict(model_id)) 
+            for model_id in MODELS.keys()]
 
 
 @app.post("/set")
