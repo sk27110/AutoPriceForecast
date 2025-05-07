@@ -276,7 +276,7 @@ def get_model_info_dict(model_id: str) -> dict:
     }
 
 
-@app.post("/fit_linear", response_model=ModelInfo)
+@app.post("/fit_linearregression", response_model=ModelInfo)
 def train_linear_model(
     params: LinearRegressionTrainParams,
     id: ModelID,
@@ -418,3 +418,11 @@ def set_active_model(model_id: Annotated[str, Query()]):
     global ACTIVE_MODEL_ID
     ACTIVE_MODEL_ID = model_id
     return {"message": f"Model {model_id} set as active"}
+
+
+@app.get("/get_dataset")
+async def get_dataset() -> List[Dict[str, Any]]:
+    try:
+        return DATASET.to_dict(orient='records')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
