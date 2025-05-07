@@ -32,8 +32,6 @@ MODEL_STORAGE = Path("saved_models")
 DATASET_DIR = Path("datasets")
 MODEL_STORAGE.mkdir(exist_ok=True)
 os.makedirs("logs", exist_ok=True)
-
-
 DATASET = pd.read_csv(DATASET_DIR / "processed_data.csv")
 X = DATASET.drop('price', axis=1)
 y = DATASET['price']
@@ -59,11 +57,23 @@ class TitleExtractor(BaseEstimator, TransformerMixin):
         return X
 
 
+
+
 app = FastAPI(title="Linear Model API")
 
 
 MODELS: Dict[str, Dict[str, Any]] = {}
 ACTIVE_MODEL_ID: Optional[str] = None
+
+
+for model_file in MODEL_STORAGE.glob("*.pkl"):
+    model_id = model_file.stem
+    try:
+        model_data = joblib.load(model_file)
+        MODELS[model_id] = model_data
+        logging.info(f"Successfully loaded model: {model_id}")
+    except Exception as e:
+        logging.error(f"Error loading model {model_id}: {str(e)}")
 
 
 class TrainParams(BaseModel):
