@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Optional
-
+import uuid
 
 BASE_API_URL = "http://localhost:8000"
 
@@ -73,7 +73,7 @@ def show_data_analysis(df: pd.DataFrame):
 
 def main():
     st.sidebar.title("Навигация")
-    page = st.sidebar.radio("Выберите раздел", ["Аналитика данных", "Управление моделями"])
+    page = st.sidebar.radio("Выберите раздел", ["Аналитика данных", "Управление моделями", "Обучение моделей"])
 
     if page == "Аналитика данных":
         st.title("📊 Анализ данных автомобилей")
@@ -118,6 +118,64 @@ def main():
         except Exception as e:
             st.error(f"Ошибка получения моделей: {str(e)}")
 
+
+    elif page == "Обучение моделей":
+        st.title("🎓 Обучение моделей")
+        
+        model_type = st.selectbox(
+            "Тип модели",
+            ["LinearRegression", "Ridge", "Lasso"]
+        )
+        
+        params = {}
+        with st.form("model_params"):
+            if model_type == "LinearRegression":
+                params['fit_intercept'] = st.checkbox("fit_intercept", True)
+                params['n_jobs'] = st.number_input("n_jobs", value=-1)
+                params['copy_X'] = st.checkbox("copy_X", True)
+            
+            elif model_type == "Ridge":
+                params['alpha'] = st.number_input("alpha", 1.0)
+                params['fit_intercept'] = st.checkbox("fit_intercept", True)
+                params['solver'] = st.selectbox(
+                    "solver", 
+                    ["auto", "svd", "cholesky", "lsqr", "sag"]
+                )
+                params['tol'] = st.number_input("tol", 0.0001)
+            
+            elif model_type == "Lasso":
+                params['alpha'] = st.number_input("alpha", 1.0)
+                params['fit_intercept'] = st.checkbox("fit_intercept", True)
+                params['selection'] = st.selectbox("selection", ["cyclic", "random"])
+                params['tol'] = st.number_input("tol", 0.0001)
+            
+            model_id = str(uuid.uuid4())[:8]
+            submitted = st.form_submit_button("Начать обучение")
+            
+            if submitted:
+                endpoint = {
+                    "LinearRegression": "/fit_linearregression",
+                    "Ridge": "/fit_ridge",
+                    "Lasso": "/fit_lasso"
+                }[model_type]
+                
+                try:
+                    response = requests.post(
+                        f"{BASE_API_URL}{endpoint}",
+                        json={
+                            "params": params,
+                            "id": {"id": model_id}
+                        }
+                    )
+                    
+                    if response.status_code == 200:
+                        st.success(f"Модель {model_id} начала обучение!")
+                        st.session_state.training_model = model_id
+                    else:
+                        st.error(f"Ошибка: {response.json()['detail']}")
+                
+                except Exception as e:
+                    st.error(f"Ошибка соединения: {str(e)}")
 
 if __name__ == "__main__":
     main()
