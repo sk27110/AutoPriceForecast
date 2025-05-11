@@ -284,6 +284,13 @@ def train_linear_model(
 ):
     model_type = ModelType(model_type="LinearRegression")
     model_id = id.id
+
+    if model_id in MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Модель с именем '{model_id}' уже существует"
+        )
+    
     background_tasks.add_task(train_job, params, model_id, model_type)
     return ModelInfo(
         id=model_id,
@@ -303,6 +310,13 @@ def train_ridge_model(
 ):
     model_type = ModelType(model_type="Ridge")
     model_id = id.id
+
+    if model_id in MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Модель с именем '{model_id}' уже существует"
+        )
+
     background_tasks.add_task(train_job, params, model_id, model_type)
 
     return ModelInfo(
@@ -323,6 +337,13 @@ def train_lasso_model(
 ):
     model_type = ModelType(model_type="Lasso")
     model_id = id.id
+
+    if model_id in MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Модель с именем '{model_id}' уже существует"
+        )
+    
     background_tasks.add_task(train_job, params, model_id, model_type)
 
     return ModelInfo(
