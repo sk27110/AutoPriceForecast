@@ -73,7 +73,7 @@ def show_data_analysis(df: pd.DataFrame):
 
 def main():
     st.sidebar.title("Навигация")
-    page = st.sidebar.radio("Выберите раздел", ["Аналитика данных", "Управление моделями", "Обучение моделей"])
+    page = st.sidebar.radio("Выберите раздел", ["Аналитика данных", "Управление моделями", "Обучение моделей", "Прогнозирование"])
 
     if page == "Аналитика данных":
         st.title("📊 Анализ данных автомобилей")
@@ -129,6 +129,13 @@ def main():
         
         params = {}
         with st.form("model_params"):
+            # Поле для ввода названия модели
+            model_name = st.text_input(
+                "Название модели",
+                help="Укажите уникальное имя для вашей модели",
+                max_chars=30
+            )
+            
             if model_type == "LinearRegression":
                 params['fit_intercept'] = st.checkbox("fit_intercept", True)
                 params['n_jobs'] = st.number_input("n_jobs", value=-1)
@@ -149,33 +156,136 @@ def main():
                 params['selection'] = st.selectbox("selection", ["cyclic", "random"])
                 params['tol'] = st.number_input("tol", 0.0001)
             
-            model_id = str(uuid.uuid4())[:8]
             submitted = st.form_submit_button("Начать обучение")
             
             if submitted:
-                endpoint = {
-                    "LinearRegression": "/fit_linearregression",
-                    "Ridge": "/fit_ridge",
-                    "Lasso": "/fit_lasso"
-                }[model_type]
+                if not model_name.strip():
+                    st.error("Пожалуйста, укажите название модели")
+                else:
+                    endpoint = {
+                        "LinearRegression": "/fit_linearregression",
+                        "Ridge": "/fit_ridge",
+                        "Lasso": "/fit_lasso"
+                    }[model_type]
+                    
+                    try:
+                        response = requests.post(
+                            f"{BASE_API_URL}{endpoint}",
+                            json={
+                                "params": params,
+                                "id": {"id": model_name.strip()}
+                            }
+                        )
+                        
+                        if response.status_code == 200:
+                            st.success(f"Модель '{model_name}' начала обучение!")
+                            st.session_state.training_model = model_name
+                        else:
+                            st.error(f"Ошибка: {response.json()['detail']}")
+                    
+                    except Exception as e:
+                        st.error(f"Ошибка соединения: {str(e)}")
+
+    elif page == "Прогнозирование":
+        st.title("🔮 Прогнозирование цены")
+        
+        prediction_type = st.radio("Тип прогноза", ["Единичный", "Пакетный"])
+        
+        if prediction_type == "Единичный":
+            with st.form("single_prediction"):
+                col1, col2 = st.columns(2)
                 
+                with col1:
+                    st.subheader("Характеристики автомобиля")
+                    title = st.text_input("Марка")
+                    year = st.number_input("Год выпуска", min_value=1900, max_value=2023)
+                    mileage = st.number_input("Пробег (км)", min_value=0)
+                    engine_capacity = st.number_input("Объем двигателя (л)", min_value=0.0, step=0.1)
+                    engine_power = st.number_input("Мощность двигателя (л.с.)", min_value=0)
+                
+                with col2:
+                    st.subheader("Дополнительные параметры")
+                    transmission = st.selectbox("Коробка передач", ["механика", "автомат", "робот", "вариатор"])
+                    body_type = st.selectbox("Тип кузова", [
+                        "универсал 5 дв.", "внедорожник 5 дв.", "седан", "минивэн",
+                        "хэтчбек 5 дв.", "купе", "кабриолет", "внедорожник 3 дв.",
+                        "хэтчбек 3 дв.", "пикап двойная кабина", "седан-хардтоп", "тарга",
+                        "компактвэн", "лифтбек", "внедорожник открытый", "родстер",
+                        "купе-хардтоп", "фургон", "пикап одинарная кабина", "микровэн",
+                        "универсал 3 дв.", "седан 2 дв.", "пикап полуторная кабина",
+                        "спидстер", "лимузин", "хэтчбек 4 дв.", "универсал", "фастбек"
+                    ])
+                    drive_type = st.selectbox("Привод", ["передний", "полный", "задний"])
+                    color = st.text_input("Цвет")
+                    fuel_type = st.selectbox("Тип топлива", ["Бензин", "Дизель", "Газ", "Гибрид", "Электро"])
+                    travel_distance = 0
+                    if fuel_type == "Электро":
+                        travel_distance = st.number_input("Дальность хода (км)", min_value=0)
+                
+                if st.form_submit_button("Прогнозировать"):
+                    error = False
+                    if fuel_type == "Электро" and travel_distance <= 0:
+                        st.error("Для электромобилей укажите дальность хода")
+                        error = True
+                    
+                    if not error:
+                        data = {
+                            "title": title,
+                            "year": year,
+                            "mileage": mileage,
+                            "transmission": transmission,
+                            "body_type": body_type,
+                            "drive_type": drive_type,
+                            "color": color,
+                            "engine_capacity": engine_capacity,
+                            "engine_power": engine_power,
+                            "fuel_type": fuel_type,
+                            "travel_distance": travel_distance
+                        }
+                        
+                        try:
+                            response = requests.post(
+                                f"{BASE_API_URL}/predict-one",
+                                json=data
+                            )
+                            if response.status_code == 200:
+                                prediction = response.json()['prediction']
+                                st.success(f"Прогнозируемая цена: {prediction:,.2f} руб.")
+                            else:
+                                st.error(f"Ошибка прогнозирования: {response.text}")
+                        except Exception as e:
+                            st.error(f"Ошибка соединения: {str(e)}")
+        
+        else:
+            uploaded_file = st.file_uploader("CSV файл с данными", type="csv")
+            if uploaded_file:
                 try:
                     response = requests.post(
-                        f"{BASE_API_URL}{endpoint}",
-                        json={
-                            "params": params,
-                            "id": {"id": model_id}
-                        }
+                        f"{BASE_API_URL}/predict-multiple",
+                        files={"file": uploaded_file.getvalue()}
                     )
                     
                     if response.status_code == 200:
-                        st.success(f"Модель {model_id} начала обучение!")
-                        st.session_state.training_model = model_id
+                        predictions = response.json()["predictions"]
+                        df = pd.read_csv(uploaded_file)
+                        df["Прогноз цены"] = predictions
+                        
+                        st.subheader("Результаты прогнозирования")
+                        st.dataframe(df.style.format({"Прогноз цены": "{:,.2f}"}))
+                        
+                        csv = df.to_csv(index=False).encode()
+                        st.download_button(
+                            "Скачать результаты",
+                            csv,
+                            "predictions.csv",
+                            "text/csv"
+                        )
+                    
                     else:
-                        st.error(f"Ошибка: {response.json()['detail']}")
+                        st.error("Ошибка обработки файла")
                 
                 except Exception as e:
-                    st.error(f"Ошибка соединения: {str(e)}")
+                    st.error(f"Ошибка: {str(e)}")
 
 if __name__ == "__main__":
     main()
