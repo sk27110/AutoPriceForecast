@@ -101,7 +101,7 @@ def main():
                     with cols[0]:
                         if st.button(f"Активировать {model['id']}"):
                             requests.post(
-                                f"{BASE_API_URL}/set?model_id={model['id']}"
+                                f"{BASE_API_URL}/set?unique_model_id={model['id']}"
                             )
                             st.rerun()
                         
