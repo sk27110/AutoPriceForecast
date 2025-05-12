@@ -1,9 +1,3 @@
-"""
-Streamlit-приложение для прогнозирования стоимости автомобилей.
-Включает анализ данных, управление моделями и прогнозирование.
-Обновлено для совместимости с новым API бэкенда.
-"""
-
 from typing import Optional
 import streamlit as st
 import requests
@@ -11,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Конфигурация страницы
+
 BASE_API_URL = "http://localhost:8000"
 st.set_page_config(
     page_title="Car Price Prediction",
@@ -36,7 +30,6 @@ def show_data_analysis(df: pd.DataFrame) -> None:
     with st.expander("🔍 Просмотр данных", expanded=True):
         st.dataframe(df.head())
 
-    # Визуализация распределения цен
     try:
         col1, col2 = st.columns(2)
         with col1:
@@ -132,19 +125,23 @@ def show_model_training() -> None:
             params['fit_intercept'] = st.checkbox("fit_intercept", True)
             params['n_jobs'] = st.number_input("n_jobs", value=-1)
             params['copy_X'] = st.checkbox("copy_X", True)
+            
         elif model_type == "Ridge":
-            params['alpha'] = st.number_input("alpha", 1.0)
+            params['alpha'] = st.number_input("alpha", value=1.0)
             params['fit_intercept'] = st.checkbox("fit_intercept", True)
             params['solver'] = st.selectbox(
                 "solver",
                 ["auto", "svd", "cholesky", "lsqr", "sag"]
             )
-            params['tol'] = st.number_input("tol", 0.0001)
+            params['tol'] = st.number_input("tol", value=0.0001)
+            params['max_iter'] = st.number_input("max_iter", value=500)
+    
         elif model_type == "Lasso":
-            params['alpha'] = st.number_input("alpha", 1.0)
+            params['alpha'] = st.number_input("alpha", value=1.0)
             params['fit_intercept'] = st.checkbox("fit_intercept", True)
             params['selection'] = st.selectbox("selection", ["cyclic", "random"])
-            params['tol'] = st.number_input("tol", 0.0001)
+            params['tol'] = st.number_input("tol", value=0.0001)
+            params['max_iter'] = st.number_input("max_iter", value=500)
         
         if st.form_submit_button("Начать обучение"):
             if not model_name.strip():
@@ -157,15 +154,27 @@ def show_model_training() -> None:
                         "Lasso": "/fit_lasso"
                     }[model_type]
                     
+                    request_body = {
+                        "params": params,
+                        "model_id_param": {"id": model_name.strip()}
+                    }
+                    
                     response = requests.post(
                         f"{BASE_API_URL}{endpoint}",
-                        json={"params": params, "model_id_param": model_name.strip()},
+                        json=request_body,
                         timeout=30
                     )
-                    response.raise_for_status()
-                    st.success(f"Модель '{model_name}' начала обучение!")
+                    
+                    if response.status_code == 200:
+                        st.success(f"Модель '{model_name}' начала обучение!")
+                        st.json(response.json())
+                    else:
+                        st.error(f"Ошибка {response.status_code}: {response.text}")
+                        
                 except requests.exceptions.RequestException as e:
-                    st.error(f"Ошибка при обучении модели: {str(e)}")
+                    st.error(f"Ошибка соединения: {str(e)}")
+                except KeyError as e:
+                    st.error(f"Неизвестный тип модели: {str(e)}")
 
 def show_prediction() -> None:
     """Отображает раздел прогнозирования."""
@@ -181,8 +190,8 @@ def show_prediction() -> None:
                 data["title"] = st.text_input("Марка")
                 data["year"] = st.number_input("Год выпуска", 1900, 2023)
                 data["mileage"] = st.number_input("Пробег (км)", 0)
-                data["engine_volume"] = st.number_input("Объем двигателя (л)", 0.0, step=0.1)
-                data["engine_horsepower"] = st.number_input("Мощность двигателя (л.с.)", 0)
+                data["engine_capacity"] = st.number_input("Объем двигателя (л)", 0.0, step=0.1)
+                data["engine_power"] = st.number_input("Мощность двигателя (л.с.)", 0)
             
             with col2:
                 st.subheader("Дополнительные параметры")
@@ -224,7 +233,8 @@ def show_prediction() -> None:
                         st.success(f"Прогнозируемая цена: {prediction:,.2f} руб.")
                     except requests.exceptions.RequestException as e:
                         st.error(f"Ошибка при прогнозировании: {str(e)}")
-    
+                        if response.status_code == 422:
+                            st.error("Проверьте правильность введенных данных")
     else:
         uploaded_file = st.file_uploader("CSV файл с данными", type="csv")
         if uploaded_file:
