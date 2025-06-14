@@ -1,0 +1,51 @@
+name: linters
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # lint-dockerfile:
+  #   name: Lint Dockerfile
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out code
+  #       uses: actions/checkout@v4
+
+  #     - name: Run Hadolint
+  #       run: docker run --rm -i hadolint/hadolint < Dockerfile
+
+  # lint-shell-scripts:
+  #   name: Lint Shell Scripts
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out code
+  #       uses: actions/checkout@v4
+
+  #     - name: Run ShellCheck
+  #       run: |
+  #         find . -name "*.sh" -print0 | xargs -0 -t -n1 docker run --rm -v "${{ github.workspace }}:/mnt" koalaman/shellcheck:stable
+
+  lint-python:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pylint
+
+      - name: Run Flake8
+        run: flake8 . --max-line-length=120 --count --show-source --statistics
+
+      - name: Run Pylint
+        run: |
+          find . -name "*.py" -print0 | xargs -0 pylint --max-line-length=120 --disable="C0103,C0114,C0115"
