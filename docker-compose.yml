@@ -3,20 +3,20 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./src/server
+      context: ./service/backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./src/server/saved_models:/app/saved_models
-      - ./src/server/datasets:/app/datasets
-      - ./src/server/logs:/app/logs
+      - ./service/backend/saved_models:/app/saved_models
+      - ./service/backend/datasets:/app/datasets
+      - ./service/backend/logs:/app/logs
     working_dir: /app
     container_name: autoprice_backend
 
   frontend:
     build:
-      context: ./src/steamlit_app
+      context: ./service/frontend
       dockerfile: Dockerfile
     ports:
       - "8501:8501"

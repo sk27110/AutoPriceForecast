@@ -1,10 +1,10 @@
 import streamlit as st
 from config import STREAMLIT_CONFIG
 from utils.data_loader import load_data_from_api
-from pages.data_analysis import show_data_analysis
-from pages.model_management import show_model_management
-from pages.model_training import show_model_training
-from pages.prediction import show_prediction
+from service.frontend.pages.data_analysis import show_data_analysis
+from service.frontend.pages.model_management import show_model_management
+from service.frontend.pages.model_training import show_model_training
+from service.frontend.pages.prediction import show_prediction
 
 
 def main() -> None:

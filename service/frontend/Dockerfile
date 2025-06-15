@@ -1,14 +1,13 @@
-FROM car-price-prediction-deps:latest
+FROM pingvan/car-price-prediction-python:latest
 
-WORKDIR /app/steamlit
+WORKDIR /app/service/frontend
 
-COPY . /app/steamlit
+COPY . ./
 
-# RUN pip install streamlit
-RUN python3 -m pip install --no-cache-dir streamlit
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN ls -la
+ENV PYTHONPATH /app
 
 EXPOSE 8501
 
-CMD ["python3", "-c", "import os; print(f'Current dir: {os.getcwd()}'); print(os.listdir('.')); print('main.py exists: ' + str(os.path.exists('main.py')))"]
+CMD ["streamlit", "run", "service/frontend/main.py", "--server.port=8501", "--server.address=0.0.0.0"]

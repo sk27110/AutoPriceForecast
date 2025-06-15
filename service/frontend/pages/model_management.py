@@ -1,5 +1,5 @@
 import streamlit as st
-from api.client import get_models, activate_model
+from service.frontend.api.client import get_models, activate_model
 
 
 def show_model_management() -> None:

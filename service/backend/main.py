@@ -6,10 +6,10 @@ from fastapi import FastAPI
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.server.core.config import MODEL_STORAGE, DATASET_DIR, logger
-from src.server.api.router import router as model_router
-from src.server.models.training import initialize as training_init
-from src.server.api.router import initialize as router_init
+from service.backend.core.config import MODEL_STORAGE, DATASET_DIR, logger
+from service.backend.api.router import router as model_router
+from service.backend.models.training import initialize as training_init
+from service.backend.api.router import initialize as router_init
 
 
 app = FastAPI(title="API для предсказания цен на автомобили")

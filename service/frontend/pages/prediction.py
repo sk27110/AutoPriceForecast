@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-from api.client import predict_single, predict_multiple
+from service.frontend.api.client import predict_single, predict_multiple
 
 
 def show_prediction() -> None:
