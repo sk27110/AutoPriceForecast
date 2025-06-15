@@ -1,8 +1,6 @@
 import time
 import joblib
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from typing import Dict, Any
 from sklearn.metrics import mean_squared_error, r2_score
 
 from service.backend.core.config import logger, MODEL_STORAGE
