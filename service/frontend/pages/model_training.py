@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from api.client import train_model
+from service.frontend.api.client import train_model
 
 
 def show_model_training() -> None:

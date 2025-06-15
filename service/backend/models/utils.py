@@ -5,9 +5,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 
-from src.server.core.config import categorical_cols, numerical_cols
-from src.server.preprocessing.feature_transformers import TitleExtractor
-from src.server.models.schemas import TrainParams, ModelType
+from service.backend.core.config import categorical_cols, numerical_cols
+from service.backend.preprocessing.feature_transformers import TitleExtractor
+from service.backend.models.schemas import TrainParams, ModelType
 
 def build_pipeline(
     params: TrainParams,

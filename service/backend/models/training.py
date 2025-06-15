@@ -5,9 +5,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Dict, Any
 from sklearn.metrics import mean_squared_error, r2_score
 
-from src.server.core.config import logger, MODEL_STORAGE
-from src.server.models.schemas import TrainParams, ModelType, ModelMetrics
-from src.server.models.utils import build_pipeline
+from service.backend.core.config import logger, MODEL_STORAGE
+from service.backend.models.schemas import TrainParams, ModelType, ModelMetrics
+from service.backend.models.utils import build_pipeline
 
 MODELS = {}
 X_train, X_test, y_train, y_test = None, None, None, None

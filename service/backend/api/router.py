@@ -4,7 +4,7 @@ import io
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File
 from fastapi.responses import JSONResponse
 
-from src.server.models.schemas import (
+from service.backend.models.schemas import (
     LinearRegressionTrainParams,
     RidgeTrainParams,
     LassoTrainParams,
@@ -14,8 +14,8 @@ from src.server.models.schemas import (
     ModelMetrics,
     PredictOneInput
 )
-from src.server.core.config import logger, numerical_cols, categorical_cols
-from src.server.models.utils import get_model_info_dict
+from service.backend.core.config import logger, numerical_cols, categorical_cols
+from service.backend.models.utils import get_model_info_dict
 
 router = APIRouter()
 
