@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional, Annotated
 import pandas as pd
 import io
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File
-from fastapi.responses import JSONResponse
 
 from service.backend.models.schemas import (
     LinearRegressionTrainParams,
@@ -184,23 +183,6 @@ def list_models() -> List[ModelInfo]:
         ModelInfo(**get_model_info_dict(model_id, MODELS, ACTIVE_MODEL_ID))
         for model_id in MODELS
     ]
-
-
-@router.post("/set")
-# def set_active_model(
-#     unique_model_id: str = Query(..., description="ID модели для активации")
-# ) -> Dict[str, str]:
-#     """Установка активной модели"""
-#     global ACTIVE_MODEL_ID  # pylint: disable=global-statement
-
-#     if unique_model_id not in MODELS:
-#         logger.warning("Попытка установки неизвестной модели: %s",
-#                        unique_model_id)
-#         raise HTTPException(404, detail="Модель не найдена")
-
-#     ACTIVE_MODEL_ID = unique_model_id
-#     logger.info("Активная модель установлена: %s", unique_model_id)
-#     return {"message": f"Модель {unique_model_id} активирована"}
 
 
 @router.post("/set")
