@@ -1,4 +1,4 @@
-FROM pingvan/car-price-prediction-python:latest
+FROM pingvan/car-price-prediction-python:version1.0
 
 COPY requirements.txt requirements.txt
 

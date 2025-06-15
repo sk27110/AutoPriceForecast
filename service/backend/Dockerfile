@@ -1,4 +1,4 @@
-FROM pingvan/car-price-prediction-backend:latest
+FROM pingvan/car-price-prediction-backend:version1.0
 
 WORKDIR /app/service/backend
 
