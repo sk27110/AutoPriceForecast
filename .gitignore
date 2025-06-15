@@ -1,2 +1,4 @@
 full-data/
 catboost_info/
+__init__/
+logs/

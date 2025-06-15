@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./src/server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/server/saved_models:/app/saved_models
+      - ./src/server/datasets:/app/datasets
+      - ./src/server/logs:/app/logs
+    working_dir: /app
+    container_name: autoprice_backend
+
+  frontend:
+    build:
+      context: ./src/steamlit_app
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8000
+    working_dir: /app
+    container_name: autoprice_frontend
