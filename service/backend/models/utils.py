@@ -9,26 +9,31 @@ from service.backend.core.config import categorical_cols, numerical_cols
 from service.backend.preprocessing.feature_transformers import TitleExtractor
 from service.backend.models.schemas import TrainParams, ModelType
 
-def build_pipeline(
-    params: TrainParams,
-    model_type: ModelType
-) -> Pipeline:
+
+def build_pipeline(params: TrainParams, model_type: ModelType) -> Pipeline:
     """Сборка pipeline для обработки данных и обучения модели"""
-    numeric_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler()),
-    ])
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
 
-    categorical_transformer = Pipeline(steps=[
-        ("title_extractor", TitleExtractor(column="title")),
-        ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore")),
-    ])
+    categorical_transformer = Pipeline(
+        steps=[
+            ("title_extractor", TitleExtractor(column="title")),
+            ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
 
-    column_trans = ColumnTransformer([
-        ("cat", categorical_transformer, categorical_cols),
-        ("num", numeric_transformer, numerical_cols),
-    ], remainder="drop")
+    column_trans = ColumnTransformer(
+        [
+            ("cat", categorical_transformer, categorical_cols),
+            ("num", numeric_transformer, numerical_cols),
+        ],
+        remainder="drop",
+    )
 
     model_cls_map = {
         "LinearRegression": LinearRegression,
@@ -40,13 +45,19 @@ def build_pipeline(
     model_params = params.model_dump()
     model = model_cls(**model_params)
 
-    return Pipeline([
-        ("preprocessor", column_trans),
-        ("classifier", model),
-    ])
+    return Pipeline(
+        [
+            ("preprocessor", column_trans),
+            ("classifier", model),
+        ]
+    )
 
 
-def get_model_info_dict(unique_model_id: str, MODELS: Dict[str, Dict[str, Any]], ACTIVE_MODEL_ID: Optional[str]) -> dict:
+def get_model_info_dict(
+    unique_model_id: str,
+    MODELS: Dict[str, Dict[str, Any]],
+    ACTIVE_MODEL_ID: Optional[str],
+) -> dict:
     """Генерация информации о модели для ответа API
 
     Args:
@@ -61,8 +72,7 @@ def get_model_info_dict(unique_model_id: str, MODELS: Dict[str, Dict[str, Any]],
     if unique_model_id not in MODELS:
         logger.error("Модель %s не найдена", unique_model_id)
         raise HTTPException(
-            status_code=404,
-            detail=f"Модель {unique_model_id} не найдена"
+            status_code=404, detail=f"Модель {unique_model_id} не найдена"
         )
 
     model_data = MODELS[unique_model_id]
@@ -87,14 +97,11 @@ def get_model_info_dict(unique_model_id: str, MODELS: Dict[str, Dict[str, Any]],
             "hyperparameters": classifier.get_params(),
             "is_active": unique_model_id == ACTIVE_MODEL_ID,
             "metrics": metrics,
-            "fit_intercept": classifier.get_params().get(
-                "fit_intercept", None),
+            "fit_intercept": classifier.get_params().get("fit_intercept", None),
         }
     except KeyError as e:
         logger.warning(
-            "Ошибка получения классификатора для модели %s: %s",
-            unique_model_id,
-            str(e)
+            "Ошибка получения классификатора для модели %s: %s", unique_model_id, str(e)
         )
         return {
             "id": unique_model_id,

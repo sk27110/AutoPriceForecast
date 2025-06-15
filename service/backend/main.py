@@ -34,8 +34,7 @@ for model_file in MODEL_STORAGE.glob("*.pkl"):
         MODELS[model_id] = joblib.load(model_file)
         logger.info("Загружена модель: %s", model_id)
     except Exception as err:  # pylint: disable=broad-except
-        logger.error("Ошибка загрузки модели %s: %s",
-                    model_id, str(err), exc_info=True)
+        logger.error("Ошибка загрузки модели %s: %s", model_id, str(err), exc_info=True)
 
 
 router_init(MODELS, ACTIVE_MODEL_ID, DATASET)
@@ -49,6 +48,4 @@ for model_file in MODEL_STORAGE.glob("*.pkl"):
         MODELS[model_id] = joblib.load(model_file)
         logger.info("Загружена модель: %s", model_id)
     except Exception as err:  # pylint: disable=broad-except
-        logger.error("Ошибка загрузки модели %s: %s",
-                     model_id, str(err), exc_info=True)
-        
+        logger.error("Ошибка загрузки модели %s: %s", model_id, str(err), exc_info=True)

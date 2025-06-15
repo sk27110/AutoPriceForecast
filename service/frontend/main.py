@@ -10,26 +10,29 @@ from service.frontend.pages.prediction import show_prediction
 def main() -> None:
     """Основная функция приложения."""
     st.set_page_config(**STREAMLIT_CONFIG)
-    
+
     st.sidebar.title("Навигация")
-    page = st.sidebar.radio("Выберите раздел", [
-        "Аналитика данных", 
-        "Управление моделями",
-        "Обучение моделей", 
-        "Прогнозирование"
-    ])
+    page = st.sidebar.radio(
+        "Выберите раздел",
+        [
+            "Аналитика данных",
+            "Управление моделями",
+            "Обучение моделей",
+            "Прогнозирование",
+        ],
+    )
 
     if page == "Аналитика данных":
         df = load_data_from_api()
         if df is not None:
             show_data_analysis(df)
-    
+
     elif page == "Управление моделями":
         show_model_management()
-    
+
     elif page == "Обучение моделей":
         show_model_training()
-    
+
     elif page == "Прогнозирование":
         show_prediction()
 
