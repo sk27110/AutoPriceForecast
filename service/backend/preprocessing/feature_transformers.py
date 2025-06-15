@@ -3,14 +3,15 @@ import numpy as np
 from typing import Optional
 from sklearn.base import BaseEstimator, TransformerMixin
 
+
 class TitleExtractor(BaseEstimator, TransformerMixin):
     """Преобразователь для объединения первых слов в названии автомобиля"""
+
     def __init__(self, column: str):
         """Инициализация с указанием имени столбца"""
         self.column = column
 
-    def fit(self, _X: pd.DataFrame,
-            _y: Optional[pd.Series] = None) -> 'TitleExtractor':
+    def fit(self, _X: pd.DataFrame, _y: Optional[pd.Series] = None) -> "TitleExtractor":
         """Требуемый метод fit (не выполняет действий)"""
         return self
 
@@ -21,6 +22,6 @@ class TitleExtractor(BaseEstimator, TransformerMixin):
         X[self.column] = np.where(
             split_title.str.len() >= 2,
             split_title.str[0] + split_title.str[1],
-            split_title.str[0]
+            split_title.str[0],
         )
         return X

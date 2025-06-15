@@ -17,9 +17,7 @@ def get_models():
 def activate_model(model_id: str) -> bool:
     """Активирует модель по ID."""
     try:
-        response = requests.post(
-            f"{BASE_API_URL}/set?unique_model_id={model_id}"
-        )
+        response = requests.post(f"{BASE_API_URL}/set?unique_model_id={model_id}")
         return response.status_code == 200
     except requests.exceptions.RequestException:
         return False
@@ -30,34 +28,23 @@ def train_model(model_type: str, model_name: str, params: dict) -> dict:
     endpoint = {
         "LinearRegression": "/fit_linearregression",
         "Ridge": "/fit_ridge",
-        "Lasso": "/fit_lasso"
+        "Lasso": "/fit_lasso",
     }[model_type]
-    
-    request_body = {
-        "params": params,
-        "model_id_param": {"id": model_name.strip()}
-    }
-    
-    response = requests.post(
-        f"{BASE_API_URL}{endpoint}",
-        json=request_body,
-        timeout=30
-    )
-    
+
+    request_body = {"params": params, "model_id_param": {"id": model_name.strip()}}
+
+    response = requests.post(f"{BASE_API_URL}{endpoint}", json=request_body, timeout=30)
+
     return {
         "status_code": response.status_code,
         "data": response.json() if response.status_code == 200 else None,
-        "error": response.text if response.status_code != 200 else None
+        "error": response.text if response.status_code != 200 else None,
     }
 
 
 def predict_single(data: dict) -> dict:
     """Выполняет единичное прогнозирование."""
-    response = requests.post(
-        f"{BASE_API_URL}/predict-one",
-        json=data,
-        timeout=10
-    )
+    response = requests.post(f"{BASE_API_URL}/predict-one", json=data, timeout=10)
     response.raise_for_status()
     return response.json()
 
@@ -65,9 +52,7 @@ def predict_single(data: dict) -> dict:
 def predict_multiple(file_data) -> dict:
     """Выполняет пакетное прогнозирование."""
     response = requests.post(
-        f"{BASE_API_URL}/predict-multiple",
-        files={"file": file_data},
-        timeout=30
+        f"{BASE_API_URL}/predict-multiple", files={"file": file_data}, timeout=30
     )
     response.raise_for_status()
     return response.json()

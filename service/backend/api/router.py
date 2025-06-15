@@ -12,7 +12,7 @@ from service.backend.models.schemas import (
     ModelID,
     ModelInfo,
     ModelMetrics,
-    PredictOneInput
+    PredictOneInput,
 )
 from service.backend.core.config import logger, numerical_cols, categorical_cols
 from service.backend.models.utils import get_model_info_dict
@@ -22,6 +22,7 @@ router = APIRouter()
 MODELS: Dict[str, Dict[str, Any]] = {}
 ACTIVE_MODEL_ID: Optional[str] = None
 DATASET = None
+
 
 def initialize(models_dict, active_model, dataset):
     global MODELS, ACTIVE_MODEL_ID, DATASET
@@ -38,20 +39,16 @@ def train_linear_model(
 ) -> ModelInfo:
     """Обучение модели линейной регрессии"""
     from src.server.models.training import train_job
-    
+
     model_type = ModelType(model_type="LinearRegression")
     unique_model_id = model_id_param.id
 
     if unique_model_id in MODELS:
-        logger.warning("Модель %s уже существует",
-                       unique_model_id)
-        raise HTTPException(400,
-                            detail=f"Модель {unique_model_id} уже существует")
+        logger.warning("Модель %s уже существует", unique_model_id)
+        raise HTTPException(400, detail=f"Модель {unique_model_id} уже существует")
 
-    logger.info("Старт обучения LinearRegression для модели %s",
-                unique_model_id)
-    background_tasks.add_task(train_job, params,
-                              unique_model_id, model_type)
+    logger.info("Старт обучения LinearRegression для модели %s", unique_model_id)
+    background_tasks.add_task(train_job, params, unique_model_id, model_type)
 
     return ModelInfo(
         id=unique_model_id,
@@ -71,20 +68,16 @@ def train_ridge_model(
 ) -> ModelInfo:
     """Обучение Ridge регрессии"""
     from src.server.models.training import train_job
-    
+
     model_type = ModelType(model_type="Ridge")
     unique_model_id = model_id_param.id
 
     if unique_model_id in MODELS:
-        logger.warning("Модель %s уже существует",
-                       unique_model_id)
-        raise HTTPException(400,
-                            detail=f"Модель {unique_model_id} уже существует")
+        logger.warning("Модель %s уже существует", unique_model_id)
+        raise HTTPException(400, detail=f"Модель {unique_model_id} уже существует")
 
-    logger.info("Старт обучения Ridge для модели %s",
-                unique_model_id)
-    background_tasks.add_task(train_job, params,
-                              unique_model_id, model_type)
+    logger.info("Старт обучения Ridge для модели %s", unique_model_id)
+    background_tasks.add_task(train_job, params, unique_model_id, model_type)
 
     return ModelInfo(
         id=unique_model_id,
@@ -104,19 +97,16 @@ def train_lasso_model(
 ) -> ModelInfo:
     """Обучение Lasso регрессии"""
     from src.server.models.training import train_job
-    
+
     model_type = ModelType(model_type="Lasso")
     unique_model_id = model_id_param.id
 
     if unique_model_id in MODELS:
         logger.warning("Модель %s уже существует", unique_model_id)
-        raise HTTPException(400,
-                            detail=f"Модель {unique_model_id} уже существует")
+        raise HTTPException(400, detail=f"Модель {unique_model_id} уже существует")
 
-    logger.info("Старт обучения Lasso для модели %s",
-                unique_model_id)
-    background_tasks.add_task(train_job, params,
-                              unique_model_id, model_type)
+    logger.info("Старт обучения Lasso для модели %s", unique_model_id)
+    background_tasks.add_task(train_job, params, unique_model_id, model_type)
 
     return ModelInfo(
         id=unique_model_id,
@@ -149,8 +139,7 @@ async def predict_one(input_data: PredictOneInput) -> Dict[str, float]:
 
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Ошибка предсказания: %s", str(e), exc_info=True)
-        raise HTTPException(500,
-                            detail=f"Ошибка предсказания: {str(e)}") from e
+        raise HTTPException(500, detail=f"Ошибка предсказания: {str(e)}") from e
 
 
 @router.post("/predict-multiple")
@@ -183,17 +172,18 @@ async def predict_multiple(
         return {"predictions": [float(p) for p in predictions]}
 
     except Exception as e:  # pylint: disable=broad-except
-        logger.error("Ошибка пакетного предсказания: %s",
-                     str(e), exc_info=True)
-        raise HTTPException(500,
-                            detail=f"Ошибка предсказания: {str(e)}") from e
+        logger.error("Ошибка пакетного предсказания: %s", str(e), exc_info=True)
+        raise HTTPException(500, detail=f"Ошибка предсказания: {str(e)}") from e
 
 
 @router.get("/models", response_model=List[ModelInfo])
 def list_models() -> List[ModelInfo]:
     """Получение списка всех доступных моделей"""
     logger.info("Запрос списка моделей")
-    return [ModelInfo(**get_model_info_dict(model_id, MODELS, ACTIVE_MODEL_ID)) for model_id in MODELS]
+    return [
+        ModelInfo(**get_model_info_dict(model_id, MODELS, ACTIVE_MODEL_ID))
+        for model_id in MODELS
+    ]
 
 
 @router.post("/set")
@@ -202,7 +192,7 @@ def list_models() -> List[ModelInfo]:
 # ) -> Dict[str, str]:
 #     """Установка активной модели"""
 #     global ACTIVE_MODEL_ID  # pylint: disable=global-statement
-    
+
 #     if unique_model_id not in MODELS:
 #         logger.warning("Попытка установки неизвестной модели: %s",
 #                        unique_model_id)
@@ -212,22 +202,20 @@ def list_models() -> List[ModelInfo]:
 #     logger.info("Активная модель установлена: %s", unique_model_id)
 #     return {"message": f"Модель {unique_model_id} активирована"}
 
+
 @router.post("/set")
 def set_active_model(
-    unique_model_id: Annotated[str,
-                               Query(description="ID модели для активации")]
+    unique_model_id: Annotated[str, Query(description="ID модели для активации")],
 ) -> Dict[str, str]:
     """Установка активной модели"""
     if unique_model_id not in MODELS:
-        logger.warning("Попытка установки неизвестной модели: %s",
-                       unique_model_id)
+        logger.warning("Попытка установки неизвестной модели: %s", unique_model_id)
         raise HTTPException(404, detail="Модель не найдена")
 
     global ACTIVE_MODEL_ID  # pylint: disable=global-statement
     ACTIVE_MODEL_ID = unique_model_id
     logger.info("Активная модель установлена: %s", unique_model_id)
     return {"message": f"Модель {unique_model_id} активирована"}
-
 
 
 @router.get("/get_dataset")
@@ -237,12 +225,5 @@ async def get_dataset() -> List[Dict[str, Any]]:
         logger.info("Запрос на получение датасета")
         return DATASET.to_dict(orient="records")
     except Exception as e:  # pylint: disable=broad-except
-        logger.error(
-            "Ошибка доступа к датасету: %s",
-            str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Ошибка загрузки данных"
-        ) from e
+        logger.error("Ошибка доступа к датасету: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка загрузки данных") from e
