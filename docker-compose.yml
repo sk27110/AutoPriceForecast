@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./service/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./service/backend/saved_models:/app/saved_models
+      - ./service/backend/datasets:/app/datasets
+      - ./service/backend/logs:/app/logs
+    working_dir: /app
+    container_name: autoprice_backend
+
+  frontend:
+    build:
+      context: ./service/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8000
+    working_dir: /app
+    container_name: autoprice_frontend
