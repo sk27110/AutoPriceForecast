@@ -13,7 +13,33 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Hadolint
-        run: docker run --rm -i hadolint/hadolint < Dockerfile
+        run: |
+          set -eo pipefail
+
+          echo "Searching for Dockerfiles..."
+          
+          dockerfile_paths=()
+          
+          while IFS= read -r -d $'\0' file; do
+            dockerfile_paths+=("$file")
+          done < <(find . \
+            -path ./.git -prune -o \
+            -type f \( -name "Dockerfile" -o -name "*.dockerfile" -o -name "Dockerfile.*" \) -print0)
+
+          if [ ${#dockerfile_paths[@]} -eq 0 ]; then
+            echo "No Dockerfiles found to lint."
+            exit 0 # Successfully exit if no Dockerfiles are found
+          else
+            echo "Found Dockerfiles to lint:"
+            printf " - %s\n" "${dockerfile_paths[@]}"
+          fi
+
+          for dockerfile_path in "${dockerfile_paths[@]}"; do
+            echo "Linting $dockerfile_path ..."
+            docker run --rm -i hadolint/hadolint < "$dockerfile_path"
+          done
+          
+          echo "All found Dockerfiles have been linted."
 
   # lint-shell-scripts:
   #   name: Lint Shell Scripts
