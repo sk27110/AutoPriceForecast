@@ -1,10 +1,8 @@
-FROM pingvan/car-price-prediction-python:latest
+FROM pingvan/car-price-prediction-backend:latest
 
 WORKDIR /app/service/backend
 
 COPY . ./
-
-RUN pip install --no-cache-dir -r requirements.txt
 
 ENV PYTHONPATH /app
 
