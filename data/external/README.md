@@ -1,3 +1,7 @@
+# External data
+
+Datasets, which we discovered during first project stage, but not used.
+
 1. name  
 
    • Тип: str  
