@@ -83,3 +83,19 @@ class ModelInfo(BaseModel):
         description="""Используется
                                           ли intercept""",
     )
+    is_pretrained: bool = Field(default=False, description="Предобученная модель")
+
+
+class PretrainedModelInfo(BaseModel):
+    """Информация о предобученной модели"""
+    
+    filename: str = Field(..., description="Имя файла модели")
+    model_id: str = Field(..., description="Идентификатор модели")
+    file_size: int = Field(..., description="Размер файла в байтах")
+    is_loaded: bool = Field(..., description="Загружена ли модель в память")
+
+
+class LoadPretrainedRequest(BaseModel):
+    """Запрос на активацию предобученной модели"""
+    
+    filename: str = Field(..., description="Имя файла модели для активации")
