@@ -3,8 +3,8 @@ from pathlib import Path
 import logging
 from logging.handlers import RotatingFileHandler
 
-MODEL_STORAGE = Path("saved_models")
-DATASET_DIR = Path("datasets")
+MODEL_STORAGE = Path("service/backend/saved_models")
+DATASET_DIR = Path("service/backend/datasets")
 MODEL_STORAGE.mkdir(exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 

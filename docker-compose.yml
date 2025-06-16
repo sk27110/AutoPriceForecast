@@ -8,7 +8,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./service/backend/saved_models:/app/saved_models
       - ./service/backend/datasets:/app/datasets
       - ./service/backend/logs:/app/logs
     working_dir: /app

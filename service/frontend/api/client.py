@@ -56,3 +56,42 @@ def predict_multiple(file_data) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def scan_pretrained_models():
+    """Сканирует предобученные модели."""
+    try:
+        response = requests.get(f"{BASE_API_URL}/pretrained/scan", timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Ошибка при сканировании предобученных моделей: {str(e)}")
+        return []
+
+
+def load_pretrained_model(filename: str) -> dict:
+    """Загружает предобученную модель."""
+    try:
+        response = requests.post(
+            f"{BASE_API_URL}/pretrained/load",
+            json={"filename": filename},
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
+
+
+def activate_pretrained_model(filename: str) -> dict:
+    """Активирует предобученную модель."""
+    try:
+        response = requests.post(
+            f"{BASE_API_URL}/pretrained/activate",
+            json={"filename": filename},
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
