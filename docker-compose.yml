@@ -23,6 +23,6 @@ services:
     depends_on:
       - backend
     environment:
-      - BACKEND_URL=http://backend:8000
+      - BASE_API_URL=http://backend:8000
     working_dir: /app
     container_name: autoprice_frontend
