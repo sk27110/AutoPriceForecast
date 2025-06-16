@@ -5,6 +5,7 @@ from service.frontend.pages.data_analysis import show_data_analysis
 from service.frontend.pages.model_management import show_model_management
 from service.frontend.pages.model_training import show_model_training
 from service.frontend.pages.prediction import show_prediction
+from service.frontend.pages.pretrained_management import show_pretrained_management
 
 
 def main() -> None:
@@ -17,6 +18,7 @@ def main() -> None:
         [
             "Аналитика данных",
             "Управление моделями",
+            "Предобученные модели",
             "Обучение моделей",
             "Прогнозирование",
         ],
@@ -29,6 +31,9 @@ def main() -> None:
 
     elif page == "Управление моделями":
         show_model_management()
+
+    elif page == "Предобученные модели":
+        show_pretrained_management()
 
     elif page == "Обучение моделей":
         show_model_training()

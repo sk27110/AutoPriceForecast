@@ -4,8 +4,10 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from fastapi import HTTPException
 
 from service.backend.core.config import categorical_cols, numerical_cols
+from service.backend.core.config import logger
 from service.backend.preprocessing.feature_transformers import TitleExtractor
 from service.backend.models.schemas import TrainParams, ModelType
 
@@ -66,8 +68,6 @@ def get_model_info_dict(
     Returns:
         Словарь с информацией о модели в формате для API
     """
-    from fastapi import HTTPException
-    from src.server.core.config import logger
 
     if unique_model_id not in MODELS:
         logger.error("Модель %s не найдена", unique_model_id)
@@ -78,6 +78,8 @@ def get_model_info_dict(
     model_data = MODELS[unique_model_id]
     pipeline = model_data.get("pipeline")
     metrics = model_data.get("metrics", {})
+    
+    is_pretrained = unique_model_id.endswith('_pretrained') or 'pretrained' in unique_model_id.lower()
 
     if pipeline is None:
         return {
@@ -87,6 +89,7 @@ def get_model_info_dict(
             "is_active": unique_model_id == ACTIVE_MODEL_ID,
             "metrics": metrics,
             "fit_intercept": None,
+            "is_pretrained": is_pretrained,
         }
 
     try:
@@ -98,6 +101,7 @@ def get_model_info_dict(
             "is_active": unique_model_id == ACTIVE_MODEL_ID,
             "metrics": metrics,
             "fit_intercept": classifier.get_params().get("fit_intercept", None),
+            "is_pretrained": is_pretrained,
         }
     except KeyError as e:
         logger.warning(
@@ -110,4 +114,5 @@ def get_model_info_dict(
             "is_active": False,
             "metrics": metrics,
             "fit_intercept": None,
+            "is_pretrained": is_pretrained,
         }

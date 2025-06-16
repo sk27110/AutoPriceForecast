@@ -12,9 +12,12 @@ from service.backend.models.schemas import (
     ModelInfo,
     ModelMetrics,
     PredictOneInput,
+    PretrainedModelInfo,
+    LoadPretrainedRequest,
 )
 from service.backend.core.config import logger, numerical_cols, categorical_cols
 from service.backend.models.utils import get_model_info_dict
+from service.backend.services.pretrained_service import pretrained_service
 
 router = APIRouter()
 
@@ -37,7 +40,7 @@ def train_linear_model(
     background_tasks: BackgroundTasks,
 ) -> ModelInfo:
     """Обучение модели линейной регрессии"""
-    from src.server.models.training import train_job
+    from service.backend.models.training import train_job
 
     model_type = ModelType(model_type="LinearRegression")
     unique_model_id = model_id_param.id
@@ -66,7 +69,7 @@ def train_ridge_model(
     background_tasks: BackgroundTasks,
 ) -> ModelInfo:
     """Обучение Ridge регрессии"""
-    from src.server.models.training import train_job
+    from service.backend.models.training import train_job
 
     model_type = ModelType(model_type="Ridge")
     unique_model_id = model_id_param.id
@@ -95,7 +98,7 @@ def train_lasso_model(
     background_tasks: BackgroundTasks,
 ) -> ModelInfo:
     """Обучение Lasso регрессии"""
-    from src.server.models.training import train_job
+    from service.backend.models.training import train_job
 
     model_type = ModelType(model_type="Lasso")
     unique_model_id = model_id_param.id
@@ -209,3 +212,69 @@ async def get_dataset() -> List[Dict[str, Any]]:
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Ошибка доступа к датасету: %s", str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка загрузки данных") from e
+
+
+@router.get("/pretrained/scan", response_model=List[PretrainedModelInfo])
+def scan_pretrained_models() -> List[PretrainedModelInfo]:
+    """Сканирование директории saved_models для поиска предобученных моделей"""
+    try:
+        logger.info("Сканирование предобученных моделей")
+        models = pretrained_service.scan_pretrained_models()
+        logger.info(f"Найдено {len(models)} предобученных моделей")
+        return models
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error("Ошибка сканирования моделей: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка сканирования моделей") from e
+
+
+@router.post("/pretrained/load")
+def load_pretrained_model(request: LoadPretrainedRequest) -> Dict[str, str]:
+    """Загрузка предобученной модели в память и добавление в список доступных моделей"""
+    try:
+        logger.info(f"Загрузка предобученной модели: {request.filename}")
+        
+        model_data = pretrained_service.load_pretrained_model(request.filename)
+        
+        model_id = request.filename.replace('.pkl', '')
+        MODELS[model_id] = model_data
+        
+        logger.info(f"Предобученная модель {request.filename} успешно загружена как {model_id}")
+        return {
+            "message": f"Модель {request.filename} успешно загружена",
+            "model_id": model_id
+        }
+        
+    except FileNotFoundError:
+        logger.error(f"Файл модели {request.filename} не найден")
+        raise HTTPException(status_code=404, detail=f"Файл {request.filename} не найден")
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error("Ошибка загрузки предобученной модели: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}") from e
+
+
+@router.post("/pretrained/activate")
+def activate_pretrained_model(request: LoadPretrainedRequest) -> Dict[str, str]:
+    """Активация предобученной модели (загрузка и установка как активной)"""
+    global ACTIVE_MODEL_ID  # pylint: disable=global-statement
+    
+    try:
+        model_id = request.filename.replace('.pkl', '')
+        
+        if model_id not in MODELS:
+            model_data = pretrained_service.load_pretrained_model(request.filename)
+            MODELS[model_id] = model_data
+            logger.info(f"Предобученная модель {request.filename} загружена")
+        
+        ACTIVE_MODEL_ID = model_id
+        logger.info(f"Предобученная модель {model_id} активирована")
+        
+        return {
+            "message": f"Предобученная модель {request.filename} активирована",
+            "model_id": model_id
+        }
+    except FileNotFoundError:
+        logger.error(f"Файл модели {request.filename} не найден")
+        raise HTTPException(status_code=404, detail=f"Файл {request.filename} не найден")
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error("Ошибка активации предобученной модели: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка активации модели: {str(e)}") from e
